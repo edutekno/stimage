@@ -45,7 +45,7 @@ def get_image_description(image_url, prompt):
     return response.json()
 
 # Streamlit app
-st.title("AI Image to Text App")
+st.title("AIChat Image - Gemma 3")
 
 # Sidebar for image upload
 with st.sidebar:
