@@ -1,141 +1,110 @@
 import streamlit as st
-from openai import OpenAI
-import base64
-from io import BytesIO
+import requests
+import json
 from PIL import Image
+import io
+import base64
 
-# Konfigurasi OpenAI client
-client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key=st.secrets["OPENROUTER_API_KEY"]
-)
+# Set your OpenRouter API key here
+OPENROUTER_API_KEY = st.secrets["OPENROUTER_API_KEY"]
 
-# Fungsi untuk mengkonversi gambar ke base64
-def image_to_base64(image):
-    buffered = BytesIO()
-    image.save(buffered, format="PNG")
-    return base64.b64encode(buffered.getvalue()).decode()
-
-# Fungsi untuk mendapatkan respons dari AI
-def get_ai_response(message, image=None):
-    messages = [
-        {
-            "role": "user",
-            "content": []
-        }
-    ]
-    
-    # Tambahkan teks jika ada
-    if message:
-        messages[0]["content"].append({
-            "type": "text",
-            "text": message
+# Function to send image to OpenRouter API and get response
+def get_image_description(image_url, prompt):
+    response = requests.post(
+        url="https://openrouter.ai/api/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "http://localhost:8501",  # Optional. Site URL for rankings on openrouter.ai.
+            "X-Title": "AI Image to Text App",  # Optional. Site title for rankings on openrouter.ai.
+        },
+        data=json.dumps({
+            "model": "google/gemma-3-27b-it:free",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": prompt
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": image_url
+                            }
+                        }
+                    ]
+                }
+            ],
         })
-    
-    # Tambahkan gambar jika ada
-    if image:
-        base64_image = image_to_base64(image)
-        messages[0]["content"].append({
-            "type": "image_url",
-            "image_url": {
-                "url": f"data:image/png;base64,{base64_image}"
-            }
-        })
-    
-    # Jika tidak ada input
-    if not message and not image:
-        return "Please provide text or an image."
+    )
+    # Debugging: Print API response and status code
+    print("API Response:", response.json())
+    print("Status Code:", response.status_code)
+    return response.json()
 
-    # Panggil API
-    try:
-        completion = client.chat.completions.create(
-            extra_headers={
-                "HTTP-Referer": "http://localhost:8501",
-                "X-Title": "AI Chat with Image",
-            },
-            model="google/gemma-3-27b-it:free",
-            messages=messages
-        )
-        return completion.choices[0].message.content
-    except Exception as e:
-        return f"Error: {str(e)}"
+# Streamlit app
+st.title("AI Image to Text App")
 
-# Inisialisasi state chat
+# Sidebar for image upload
+with st.sidebar:
+    st.header("Upload Image")
+    uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+
+# Main window for conversation
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Inisialisasi state untuk gambar yang diupload
-if "uploaded_image" not in st.session_state:
-    st.session_state.uploaded_image = None
+# Display chat messages
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-# Sidebar untuk upload dan preview gambar
-with st.sidebar:
-    st.title("Upload Image")
-    uploaded_file = st.file_uploader("Upload an image", type=['png', 'jpg', 'jpeg'])
-    
-    if uploaded_file:
-        st.session_state.uploaded_image = Image.open(uploaded_file)
-        #st.success("Image uploaded successfully!")
-        st.image(st.session_state.uploaded_image, caption="Uploaded Image", use_column_width=True)
+# If an image is uploaded, display it
+if uploaded_file is not None:
+    # Display the uploaded image
+    image = Image.open(uploaded_file)
+    st.image(image, caption='Uploaded Image.', use_container_width=True)
 
-# UI Streamlit utama
-st.title("AI Playground - Gemma 3")
+    # Convert image to URL
+    buffered = io.BytesIO()
+    image.save(buffered, format="PNG")
+    image_url = f"data:image/png;base64,{base64.b64encode(buffered.getvalue()).decode()}"
 
-# Area chat
-chat_container = st.container()
+    # Save image URL in session state
+    st.session_state.image_url = image_url
+else:
+    # Clear image URL if no image is uploaded
+    if "image_url" in st.session_state:
+        del st.session_state.image_url
 
-# Tampilkan pesan di chat
-with chat_container:
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
-            if "image" in message and message["image"]:
-                st.image(message["image"], width=300)
+# Chat input for additional questions
+if prompt := st.chat_input("Ask about the image..."):
+    # Add user message to chat
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
 
-# Input pengguna dengan st.chat_input
-user_input = st.chat_input("Type your message here...")
+    # Check if an image is uploaded
+    if "image_url" in st.session_state:
+        # Show loading spinner while waiting for API response
+        with st.spinner("Waiting for API response..."):
+            # Get image description from OpenRouter API
+            response = get_image_description(st.session_state.image_url, prompt)
+            if "choices" in response:
+                description = response["choices"][0]["message"]["content"]
+            else:
+                description = "Failed to get description from the API."
+                if "error" in response:
+                    description += f" Error: {response['error']}"
 
-# Proses input ketika pengguna menekan Enter
-if user_input:
-    # Tampilkan pesan user
-    user_message = {"role": "user", "content": user_input, "image": None}
-    if st.session_state.uploaded_image:
-        user_message["image"] = st.session_state.uploaded_image
-    
-    st.session_state.messages.append(user_message)
-    
-    # Dapatkan respons AI
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            image_to_process = st.session_state.uploaded_image if st.session_state.uploaded_image else None
-            response = get_ai_response(user_input, image_to_process)
-            st.write(response)
-    
-    # Tambahkan respons ke history
-    st.session_state.messages.append({"role": "assistant", "content": response, "image": None})
-    
-    # Reset gambar yang diupload setelah dikirim
-    st.session_state.uploaded_image = None
-    
-    # Rerun untuk memperbarui tampilan
-    st.rerun()
-
-# Styling tambahan
-st.markdown("""
-    <style>
-    .stTextInput > div > div > input {
-        border-radius: 20px;
-    }
-    .stForm {
-        position: fixed;
-        bottom: 0;
-        width: 100%;
-        background: white;
-        padding: 10px;
-        border-top: 1px solid #eee;
-    }
-    .stContainer {
-        margin-bottom: 100px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+        # Add assistant message to chat
+        st.session_state.messages.append({"role": "assistant", "content": description})
+        with st.chat_message("assistant"):
+            st.markdown(description)
+    else:
+        # If no image is uploaded, just echo the prompt
+        st.session_state.messages.append({"role": "assistant", "content": prompt})
+        with st.chat_message("assistant"):
+            st.markdown(prompt)
