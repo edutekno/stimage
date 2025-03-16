@@ -7,7 +7,7 @@ from PIL import Image
 # Konfigurasi OpenAI client
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
-    api_key="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",  # Ganti dengan API key Anda
+    api_key=st.secrets["OPENROUTER_API_KEY"]
 )
 
 # Fungsi untuk mengkonversi gambar ke base64
