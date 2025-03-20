@@ -52,6 +52,11 @@ with st.sidebar:
     st.header("Upload Image")
     uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
+    # Preview image in the sidebar if uploaded
+    if uploaded_file is not None:
+        image = Image.open(uploaded_file)
+        st.image(image, caption='Uploaded Image (Sidebar)', use_container_width=True)
+
 # Initialize chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -61,11 +66,11 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# If an image is uploaded, display it
+# If an image is uploaded, display it at the top of the chatbot
 if uploaded_file is not None:
-    # Display the uploaded image
+    # Display the uploaded image at the top of the chatbot
     image = Image.open(uploaded_file)
-    st.image(image, caption='Uploaded Image.', use_container_width=True)
+    st.image(image, caption='Uploaded Image (Chatbot)', use_container_width=True)
 
     # Convert image to URL
     buffered = io.BytesIO()
@@ -89,7 +94,7 @@ if prompt := st.chat_input("Ask about the image..."):
     # Check if an image is uploaded
     if "image_url" in st.session_state:
         # Show loading spinner while waiting for API response
-        with st.spinner("Waiting for API response..."):
+        with st.spinner("Waiting..."):
             # Get image description from OpenRouter API
             response = get_image_description(st.session_state.image_url, prompt)
             if "choices" in response:
