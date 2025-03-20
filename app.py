@@ -52,11 +52,11 @@ with st.sidebar:
     st.header("Upload Image")
     uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
-# Main window for conversation
+# Initialize chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Display chat messages
+# Display chat messages from history
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
@@ -105,6 +105,6 @@ if prompt := st.chat_input("Ask about the image..."):
             st.markdown(description)
     else:
         # If no image is uploaded, just echo the prompt
-        st.session_state.messages.append({"role": "assistant", "content": prompt})
+        st.session_state.messages.append({"role": "assistant", "content": "No image uploaded. Please upload an image first."})
         with st.chat_message("assistant"):
-            st.markdown(prompt)
+            st.markdown("No image uploaded. Please upload an image first.")
