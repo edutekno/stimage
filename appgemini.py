@@ -45,12 +45,12 @@ def get_image_description(image_url, prompt):
     return response.json()
 
 # Streamlit app
-st.title("AIChat Image - Gemini-2-5")
+st.title("AI-Image - Gemini Pro-2-5")
 
 # Sidebar for image upload
 with st.sidebar:
-    st.header("Upload Image")
-    uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+    st.header("Upload Gambar")
+    uploaded_file = st.file_uploader("Pilih file gambar...", type=["jpg", "jpeg", "png"])
 
 # Main window for conversation
 if "messages" not in st.session_state:
@@ -65,7 +65,7 @@ for message in st.session_state.messages:
 if uploaded_file is not None:
     # Display the uploaded image
     image = Image.open(uploaded_file)
-    st.image(image, caption='Uploaded Image.', use_container_width=True)
+    st.image(image, caption='Gambar.', use_container_width=True)
 
     # Convert image to URL
     buffered = io.BytesIO()
@@ -80,7 +80,7 @@ else:
         del st.session_state.image_url
 
 # Chat input for additional questions
-if prompt := st.chat_input("Ask about the image..."):
+if prompt := st.chat_input("Tanyakan terkait gambar..."):
     # Add user message to chat
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
@@ -89,7 +89,7 @@ if prompt := st.chat_input("Ask about the image..."):
     # Check if an image is uploaded
     if "image_url" in st.session_state:
         # Show loading spinner while waiting for API response
-        with st.spinner("Waiting for API response..."):
+        with st.spinner("Berpikir..."):
             # Get image description from OpenRouter API
             response = get_image_description(st.session_state.image_url, prompt)
             if "choices" in response:
