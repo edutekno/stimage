@@ -19,7 +19,8 @@ def get_image_description(image_url, prompt):
             "X-Title": "AI Image to Text App",  # Optional. Site title for rankings on openrouter.ai.
         },
         data=json.dumps({
-            "model": "google/gemini-2.5-pro-exp-03-25:free",
+            #google/gemini-2.5-pro-exp-03-25:free
+            "model": "google/gemini-2.0-pro-exp-02-05:free",
             "messages": [
                 {
                     "role": "user",
