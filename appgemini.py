@@ -20,7 +20,7 @@ def get_image_description(image_url, prompt):
         },
         data=json.dumps({
             #google/gemini-2.5-pro-exp-03-25:free
-            "model": "google/gemini-2.0-pro-exp-02-05:free",
+            "model": "google/gemini-pro-vision",
             "messages": [
                 {
                     "role": "user",
